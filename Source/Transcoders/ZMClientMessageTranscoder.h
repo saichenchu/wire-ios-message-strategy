@@ -25,10 +25,20 @@
 @protocol ClientRegistrationDelegate;
 @protocol DeliveryConfirmationDelegate;
 
+@protocol CallingMessageReceptionDelegate
+
+- (void)didReceiveMessageWithContent:(NSString *)content atServerTimestamp:(NSDate *)timestamp inConversation:(ZMConversation *)conversation userID:(NSUUID *)userID clientID:(NSUUID *)clientID;
+
+@end
+
 @interface ZMClientMessageTranscoder : ZMMessageTranscoder
 
 - (instancetype)initWithManagedObjectContext:(NSManagedObjectContext *)moc
                  localNotificationDispatcher:(id<ZMPushMessageHandler>)dispatcher
                     clientRegistrationStatus:(id<ClientRegistrationDelegate>)clientDeletionDelegate
-                      apnsConfirmationStatus:(id<DeliveryConfirmationDelegate>)apnsConfirmationStatus;
+                      apnsConfirmationStatus:(id<DeliveryConfirmationDelegate>)apnsConfirmationStatus
+             callingMessageReceptionDelegate:(id<CallingMessageReceptionDelegate>)callingMessageReceptionDelegate;
+
+@property (readonly, weak) id<CallingMessageReceptionDelegate> callingMessageReceptionDelegate;
+
 @end

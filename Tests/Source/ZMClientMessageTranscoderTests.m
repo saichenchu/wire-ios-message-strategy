@@ -1,4 +1,4 @@
-// 
+//
 // Wire
 // Copyright (C) 2016 Wire Swiss GmbH
 // 
@@ -44,14 +44,36 @@
 
 @end
 
+@interface FakeCallingMessageReceptionDelegate : NSObject <CallingMessageReceptionDelegate>
 
+@property (nonatomic) NSMutableArray *receivedCallingMessage;
+
+@end
+
+@implementation FakeCallingMessageReceptionDelegate
+
+- (instancetype)init;
+{
+    self = [super init];
+    if (self) {
+        self.receivedCallingMessage = [[NSMutableArray alloc] init];
+    }
+    return self;
+}
+
+- (void)didReceiveMessageWithContent:(NSString *)content atServerTimestamp:(NSDate * __unused)timestamp inConversation:(ZMConversation * __unused)conversation userID:(NSUUID * __unused)userID clientID:(NSUUID * __unused)clientID;
+{
+    [self.receivedCallingMessage addObject:content];
+}
+
+@end
 
 @interface ZMClientMessageTranscoderTests : ZMMessageTranscoderTests
 
 @property (nonatomic) id<ClientRegistrationDelegate> mockClientRegistrationStatus;
 @property (nonatomic) MockConfirmationStatus *mockAPNSConfirmationStatus;
 @property (nonatomic) id<ZMPushMessageHandler> mockNotificationDispatcher;
-
+@property (nonatomic) FakeCallingMessageReceptionDelegate* mockCallingReception;
 - (ZMConversation *)setupOneOnOneConversation;
 
 @end
@@ -65,6 +87,7 @@
     self.mockAPNSConfirmationStatus = [[MockConfirmationStatus alloc] init];
     self.mockClientRegistrationStatus = [OCMockObject mockForProtocol:@protocol(ClientRegistrationDelegate)];
     self.mockNotificationDispatcher = [OCMockObject niceMockForProtocol:@protocol(ZMPushMessageHandler)];
+    self.mockCallingReception       = [[FakeCallingMessageReceptionDelegate alloc] init];
     [self setupSUT];
     
     [[self.mockExpirationTimer stub] tearDown];
@@ -76,7 +99,8 @@
     self.sut = [[ZMClientMessageTranscoder alloc] initWithManagedObjectContext:self.syncMOC
                                                    localNotificationDispatcher:self.notificationDispatcher
                                                       clientRegistrationStatus:self.mockClientRegistrationStatus
-                                                        apnsConfirmationStatus:self.mockAPNSConfirmationStatus];
+                                                        apnsConfirmationStatus:self.mockAPNSConfirmationStatus
+                                               callingMessageReceptionDelegate:self.mockCallingReception];
 }
 
 - (void)tearDown
@@ -1325,4 +1349,44 @@
 
 @end
 
+
+@implementation ZMClientMessageTranscoderTests (CallingMessages)
+
+- (void)testThatReceivingACallingMessageNotifiesTheDelegate;
+{
+    UserClient *client = [self createSelfClient];
+    NSString *text = @"JCVDay";
+    NSUUID *conversationID = [NSUUID createUUID];
+    
+    //create encrypted message
+    ZMGenericMessage *message = [ZMGenericMessage messageWithCallingContent:text nonce:[NSUUID createUUID].transportString];
+    NSData *encryptedData = [self encryptedMessage:message recipient:client];
+    
+    NSDictionary *payload = @{@"recipient": client.remoteIdentifier, @"sender": client.remoteIdentifier, @"text": [encryptedData base64String]};
+    ZMUpdateEvent *updateEvent = [ZMUpdateEvent eventFromEventStreamPayload:
+                                  @{
+                                    @"type":@"conversation.otr-message-add",
+                                    @"data":payload,
+                                    @"conversation":conversationID.transportString,
+                                    @"time":[NSDate dateWithTimeIntervalSince1970:555555].transportString
+                                    } uuid:nil];
+    
+    ZMConversation *conversation = [ZMConversation insertNewObjectInManagedObjectContext:self.syncMOC];
+    conversation.remoteIdentifier = conversationID;
+    [self.syncMOC saveOrRollback];
+    
+    __block ZMUpdateEvent *decryptedEvent;
+    [self.syncMOC.zm_cryptKeyStore.encryptionContext perform:^(EncryptionSessionsDirectory * _Nonnull sessionsDirectory) {
+        decryptedEvent = [sessionsDirectory decryptUpdateEventAndAddClient:updateEvent managedObjectContext:self.syncMOC];
+    }];
+    
+    // when
+    [self.sut processEvents:@[decryptedEvent] liveEvents:NO prefetchResult:nil];
+    
+    // then
+    XCTAssertEqual(self.mockCallingReception.receivedCallingMessage.count, 1lu);
+    XCTAssertEqualObjects([self.mockCallingReception.receivedCallingMessage lastObject], text);
+}
+
+@end
 

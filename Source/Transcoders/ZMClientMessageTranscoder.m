@@ -31,6 +31,7 @@
 @property (nonatomic) ClientMessageRequestFactory *requestsFactory;
 @property (nonatomic, weak) id <ClientRegistrationDelegate> clientRegistrationStatus;
 @property (nonatomic, weak) id<DeliveryConfirmationDelegate> apnsConfirmationStatus;
+@property (nonatomic, weak) id<CallingMessageReceptionDelegate> callingMessageReceptionDelegate;
 
 @end
 
@@ -40,7 +41,8 @@
 - (instancetype)initWithManagedObjectContext:(NSManagedObjectContext *)moc
                  localNotificationDispatcher:(id<ZMPushMessageHandler>)dispatcher
                     clientRegistrationStatus:(id<ClientRegistrationDelegate>)clientRegistrationStatus
-                      apnsConfirmationStatus:(id<DeliveryConfirmationDelegate>)apnsConfirmationStatus;
+                      apnsConfirmationStatus:(id<DeliveryConfirmationDelegate>)apnsConfirmationStatus
+             callingMessageReceptionDelegate:(id<CallingMessageReceptionDelegate>)callingMessageReceptionDelegate;
 {
     ZMUpstreamInsertedObjectSync *clientTextMessageUpstreamSync = [[ZMUpstreamInsertedObjectSync alloc] initWithTranscoder:self entityName:[ZMClientMessage entityName] filter:nil managedObjectContext:moc];
     ZMMessageExpirationTimer *messageTimer = [[ZMMessageExpirationTimer alloc] initWithManagedObjectContext:moc entityName:[ZMClientMessage entityName] localNotificationDispatcher:dispatcher filter:nil];
@@ -53,6 +55,7 @@
         self.requestsFactory = [ClientMessageRequestFactory new];
         self.clientRegistrationStatus = clientRegistrationStatus;
         self.apnsConfirmationStatus = apnsConfirmationStatus;
+        self.callingMessageReceptionDelegate = callingMessageReceptionDelegate;
         [self deleteEphemeralMessagesIfNeeded];
     }
     return self;
