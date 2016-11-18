@@ -65,13 +65,11 @@
             if (genMsg.hasCalling) {
                 //TODO: call callback
                 NSString *callingContent = genMsg.calling.content;
-                ZMUser *selfUser = [ZMUser selfUserInContext:msg.managedObjectContext];
-                UserClient *selfClient = selfUser.selfClient;
                 [self.callingMessageReceptionDelegate didReceiveMessageWithContent:callingContent
                                                                  atServerTimestamp:msg.serverTimestamp
                                                                     inConversation:msg.conversation
-                                                                            userID:selfUser.remoteIdentifier
-                                                                          clientID:[NSUUID uuidWithTransportString:selfClient.remoteIdentifier]];
+                                                                            userID:event.senderUUID.transportString
+                                                                          clientID:event.senderClientID];
             }  else {
                 [createdMessages addObject:msg];
             }

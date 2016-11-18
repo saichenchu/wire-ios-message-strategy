@@ -27,7 +27,7 @@
 
 @protocol CallingMessageReceptionDelegate
 
-- (void)didReceiveMessageWithContent:(NSString *)content atServerTimestamp:(NSDate *)timestamp inConversation:(ZMConversation *)conversation userID:(NSUUID *)userID clientID:(NSUUID *)clientID;
+- (void)didReceiveMessageWithContent:(NSString *)content atServerTimestamp:(NSDate *)timestamp inConversation:(ZMConversation *)conversation userID:(NSString *)userID clientID:(NSString *)clientID;
 
 @end
 
