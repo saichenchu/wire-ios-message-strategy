@@ -61,18 +61,7 @@
     for(ZMUpdateEvent* event in events) {
         ZMMessage *msg = [self messageFromUpdateEvent:event prefetchResult:prefetchResult];
         if(msg != nil) {
-            ZMGenericMessage *genMsg = ((ZMClientMessage *)msg).genericMessage;
-            if (genMsg.hasCalling) {
-                //TODO: call callback
-                NSString *callingContent = genMsg.calling.content;
-                [self.callingMessageReceptionDelegate didReceiveMessageWithContent:callingContent
-                                                                 atServerTimestamp:msg.serverTimestamp
-                                                                    inConversation:msg.conversation
-                                                                            userID:event.senderUUID.transportString
-                                                                          clientID:event.senderClientID];
-            }  else {
-                [createdMessages addObject:msg];
-            }
+            [createdMessages addObject:msg];
         }
     }
     return createdMessages;
